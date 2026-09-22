@@ -1,163 +1,137 @@
-# Veyon - Virtual Eye On Networks
+# Veyon Web 控制端
 
-[![.github/workflows/build.yml](https://github.com/veyon/veyon/actions/workflows/build.yml/badge.svg?branch=4.5)](https://github.com/veyon/veyon/actions/workflows/build.yml)
-[![Latest stable release](https://img.shields.io/github/release/veyon/veyon.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)
-[![Overall downloads on Github](https://img.shields.io/github/downloads/veyon/veyon/total.svg?maxAge=3600)](https://github.com/veyon/veyon/releases)
-[![Documentation Status](https://readthedocs.org/projects/veyon/badge/?version=latest)](https://docs.veyon.io/)
-[![Localise on Transifex](https://img.shields.io/badge/localise-on_transifex-green.svg)](https://app.transifex.com/veyon-solutions/veyon/)
-[![license](https://img.shields.io/badge/license-GPLv2-green.svg)](LICENSE)
+这是一个基于浏览器的 Veyon 远程控制界面，无需安装任何客户端软件，直接在浏览器中即可管理教室电脑。
 
+## 功能特性
 
-## What is Veyon?
+- ✅ 查看所有教室的计算机列表
+- ✅ 发送文本消息到指定计算机
+- ✅ 远程锁定/解锁计算机屏幕
+- ✅ 远程重启计算机
+- ✅ 远程关闭计算机
+- ✅ 远程唤醒计算机（需要支持 Wake-on-LAN）
+- ✅ 响应式设计，支持手机和平板访问
 
-Veyon is a free and open source software for monitoring and controlling
-computers across multiple platforms. Veyon supports you in teaching in digital
-learning environments, performing virtual trainings or giving remote support.
+## 系统要求
 
-The following features are available in Veyon:
+- **操作系统**: Windows（安装了 Veyon）
+- **Python**: 3.8 或更高版本
+- **Veyon**: 已正确安装并配置
 
-  * Overview: monitor all computers in one or multiple locations or classrooms
-  * Remote access: view or control computers to watch and support users
-  * Demo: broadcast the teacher's screen in realtime (fullscreen/window)
-  * Screen lock: draw attention to what matters right now
-  * Communication: send text messages to students
-  * Start and end lessons: log in and log out users all at once
-  * Screenshots: record learning progress and document infringements
-  * Programs & websites: launch programs and open website URLs remotely
-  * Teaching material: distribute and open documents, images and videos easily
-  * Administration: power on/off and reboot computers remotely
+## 安装步骤
 
+### 1. 安装 Python 依赖
 
-## License
+```bash
+pip install -r requirements.txt
+```
 
-Copyright (c) 2004-2026 Tobias Junghans / Veyon Solutions.
+### 2. 确认 Veyon 安装路径
 
-See the file COPYING for the GNU GENERAL PUBLIC LICENSE.
+确保 Veyon 已安装在默认路径 `C:\Program Files\Veyon\`，如果安装在不同位置，请修改 `app.py` 中的路径：
 
+```python
+cmd = ['C:\\Program Files\\Veyon\\veyon-cli.exe'] + args
+```
 
-## Installation and configuration
+改为实际路径，例如：
+```python
+cmd = ['D:\\Veyon\\veyon-cli.exe'] + args
+```
 
-Please refer to the official Veyon Administrator Manual at https://docs.veyon.io/en/latest/admin/index.html
-for information on the installation and configuration of Veyon.
+### 3. 启动服务
 
+```bash
+python app.py
+```
 
-## Usage
+### 4. 访问 Web 界面
 
-Please refer to the official Veyon User Manual at https://docs.veyon.io/en/latest/user/index.html
-for information on how to use Veyon.
+打开浏览器访问：http://localhost:5000
 
+如果要让局域网内其他设备访问，可以使用本机 IP 地址，例如：http://192.168.1.100:5000
 
-## Veyon on Linux
+## 使用说明
 
-### Downloading sources
+### 查看计算机列表
+页面会自动加载所有已配置的教室和计算机。
 
-First grab the latest sources by cloning the Git repository and fetching all submodules:
+### 发送消息
+1. 点击任意计算机的"发消息"按钮
+2. 在弹窗中输入消息内容
+3. 点击"发送"或按回车键
 
-	git clone --recursive https://github.com/veyon/veyon.git && cd veyon
+### 锁定/解锁计算机
+点击"锁定"按钮可锁定指定计算机的屏幕，学生将无法操作。
 
+### 重启/关机
+- 点击"重启"按钮可远程重启计算机
+- 点击"关机"按钮可远程关闭计算机（会有二次确认）
 
-### Installing dependencies
+## API 接口
 
-Requirements for Debian-based distributions:
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/computers` | GET | 获取计算机列表 |
+| `/api/message` | POST | 发送消息 |
+| `/api/lock` | POST | 锁定计算机 |
+| `/api/unlock` | POST | 解锁计算机 |
+| `/api/shutdown` | POST | 关闭计算机 |
+| `/api/reboot` | POST | 重启计算机 |
+| `/api/wake` | POST | 唤醒计算机 |
 
-- Build tools: g++ libc6-dev make cmake dpkg-dev
-- Qt5: qtbase5-dev qtbase5-private-dev qtbase5-dev-tools qttools5-dev qttools5-dev-tools
-- X11: xorg-dev libxtst-dev libfakekey-dev
-- libjpeg: libjpeg-dev provided by libjpeg-turbo8-dev or libjpeg62-turbo-dev
-- zlib: zlib1g-dev
-- OpenSSL: libssl-dev
-- PAM: libpam0g-dev
-- procps: libprocps-dev
-- LZO: liblzo2-dev
-- QCA: libqca-qt5-2-dev
-- LDAP: libldap2-dev
-- SASL: libsasl2-dev
+### 请求示例
 
-As root you can run
+```bash
+# 发送消息
+curl -X POST http://localhost:5000/api/message \
+  -H "Content-Type: application/json" \
+  -d '{"computer": "A01", "message": "请保持安静"}'
 
-	apt install g++ libc6-dev make cmake qtbase5-dev qtbase5-private-dev \
-	            qtbase5-dev-tools qttools5-dev qttools5-dev-tools \
-	            xorg-dev libxtst-dev libfakekey-dev libjpeg-dev zlib1g-dev libssl-dev libpam0g-dev \
-	            libprocps-dev liblzo2-dev libqca-qt5-2-dev libldap2-dev \
-	            libsasl2-dev
+# 关机
+curl -X POST http://localhost:5000/api/shutdown \
+  -H "Content-Type: application/json" \
+  -d '{"computer": "A01"}'
+```
 
+## 生产环境部署
 
+开发环境使用 Flask 内置服务器，生产环境建议使用 Gunicorn 或 uWSGI：
 
-Requirements for RedHat-based distributions:
+### 使用 Gunicorn（Windows 需使用 wsgidav 或其他 WSGI 服务器）
 
-- Build tools: gcc-c++ make cmake rpm-build
-- Qt5: qt5-devel qt5-qtbase-private-devel
-- X11: libXtst-devel libXrandr-devel libXinerama-devel libXcursor-devel libXrandr-devel libXdamage-devel libXcomposite-devel libXfixes-devel libfakekey-devel
-- libjpeg: libjpeg-turbo-devel
-- zlib: zlib-devel
-- OpenSSL: openssl-devel
-- PAM: pam-devel
-- procps: procps-devel
-- LZO: lzo-devel
-- QCA: qca-devel qca-qt5-devel
-- LDAP: openldap-devel
-- SASL: cyrus-sasl-devel
+```bash
+pip install gunicorn
+gunicorn -w 4 -b 0.0.0.0:5000 app:app
+```
 
-As root you can run
+### 使用 Nginx 反向代理（可选）
 
-	dnf install gcc-c++ make cmake rpm-build qt5-devel libXtst-devel libXrandr-devel libXinerama-devel libXcursor-devel \
-             libXrandr-devel libXdamage-devel libXcomposite-devel libXfixes-devel libjpeg-turbo-devel zlib-devel \
-             openssl-devel pam-devel procps-devel lzo-devel qca-devel qca-qt5-devel openldap-devel cyrus-sasl-devel
+配置 Nginx 反向代理到 Flask 应用，提供更好的性能和安全性。
 
+## 注意事项
 
-### Configuring and building sources
+1. **权限要求**: 运行此服务的用户需要有执行 veyon-cli 的权限
+2. **网络配置**: 确保控制端和被控端网络连通，防火墙已放行 Veyon 端口
+3. **认证密钥**: 确保已正确配置 Veyon 的访问密钥
+4. **安全性**: 生产环境请添加用户认证机制，避免未授权访问
 
-Run the following commands:
+## 故障排查
 
-	mkdir build
-	cd build
-	cmake ..
-	make -j4
+### 问题：提示"未找到 veyon-cli"
+- 确认 Veyon 已正确安装
+- 检查 app.py 中的路径配置是否正确
 
-NOTE: If you want to build a .deb or .rpm package for this software, instead of the provided cmake command, you should use:
+### 问题：命令执行失败
+- 在命令行手动测试：`veyon-cli networkobjects list`
+- 检查 Veyon 服务是否正常运行
+- 查看 Veyon 日志文件
 
-	cmake -DCMAKE_INSTALL_PREFIX=/usr ..
+### 问题：无法控制某些计算机
+- 确认目标计算机的 Veyon 服务已启动
+- 检查网络连接和防火墙设置
+- 确认访问密钥配置正确
 
-to install package files in /usr instead of /usr/local.
+## 许可证
 
-If some requirements are not fullfilled, CMake will inform you about it and
-you will have to install the missing software before continuing.
-
-You can now generate a package (.deb or .rpm depending what system you are in).
-
-For generating a package you can run
-
-	fakeroot make package
-
-Then you'll get something like veyon_x.y.z_arch.deb or veyon-x.y.z.arch.rpm
-
-Alternatively you can install the built binaries directly (not recommended for
-production systems) by running the following command as root:
-
-	make install
-
-### Arch linux
-
-A PKGBUILD can be found in the [AUR](https://aur.archlinux.org/packages/veyon/).
-
-### PPA
-
-This PPA contains official Veyon packages for Ubuntu suitable for use both on desktop computers and ARM boards (e.g. Raspberry Pi). Even though only packages for LTS releases are available they should work for subsequent non-LTS releases as well.
-
-	sudo add-apt-repository ppa:veyon/stable
-	sudo apt-get update
-
-## Join development
-
-If you are interested in Veyon, its programming, artwork, testing or something like that, you're welcome to participate in the development of Veyon!
-
-Before starting the implementation of a new feature, please always open an issue at https://github.com/veyon/veyon/issues to start a discussion about your intended implementation. There may be different ideas, improvements, hints or maybe an already ongoing work on this feature.
-
-## Join translation team
-
-Veyon and its documentation are translated at the Transifex platform. Please go to https://app.transifex.com/veyon-solutions/veyon and join the corresponding translation team. Please DO NOT submit pull requests for modified translation files since this would require manual Transifex synchronizations on our side.
-
-## More information
-
-* https://veyon.io/
-* https://docs.veyon.io/
+本项目基于 Veyon 官方命令行工具开发，遵循相应的开源协议。
