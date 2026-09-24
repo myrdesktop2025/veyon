@@ -37,6 +37,7 @@ jobs:
         with:
           msystem: UCRT64
           update: false
+          cache: false
           install: >-
             git
             base-devel
