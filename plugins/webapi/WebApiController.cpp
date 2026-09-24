@@ -26,9 +26,13 @@
 #include <QBuffer>
 #include <QEventLoop>
 #include <QImageWriter>
+#include <functional>
 
 #include "ComputerControlInterface.h"
 #include "FeatureManager.h"
+#include "NetworkObject.h"
+#include "NetworkObjectDirectory.h"
+#include "NetworkObjectDirectoryManager.h"
 #include "PlatformNetworkFunctions.h"
 #include "WebApiAuthenticationProxy.h"
 #include "WebApiConfiguration.h"
@@ -390,7 +394,7 @@ WebApiController::Response WebApiController::setFeatureStatus( const Request& re
 	}
 
 	const auto operation = request.data[k2s(Key::Active)].toBool() ? FeatureProviderInterface::Operation::Start
-																	 : FeatureProviderInterface::Operation::Stop;
+																 : FeatureProviderInterface::Operation::Stop;
 	const auto arguments = request.data[k2s(Key::Arguments)].toMap();
 
 	runInWorkerThread([&] {
@@ -490,6 +494,46 @@ WebApiController::Response WebApiController::getSessionInformation(const Request
 			{k2s(Key::SessionHostName), controlInterface->sessionInfo().hostName},
 		}
 	};
+}
+
+
+
+WebApiController::Response WebApiController::listHosts( const Request& request )
+{
+	m_apiTotalRequestsCounter++;
+
+	Q_UNUSED(request)
+
+	QVariantList hosts; // clazy:exclude=inefficient-qlist
+
+	auto* directory = VeyonCore::networkObjectDirectoryManager().configuredDirectory();
+	if( directory == nullptr )
+	{
+		return hosts;
+	}
+
+	const std::function<void(const NetworkObject&)> collectHosts = [&](const NetworkObject& parent) {
+		const auto& objects = directory->objects( parent );
+		for( const auto& object : objects )
+		{
+			if( object.type() == NetworkObject::Type::Host )
+			{
+				hosts.append( QVariantMap{
+					{ k2s(Key::Uid), object.uid().toString(QUuid::WithoutBraces) },
+					{ k2s(Key::Name), object.name() },
+					{ QStringLiteral("hostAddress"), object.hostAddress() }
+				} );
+			}
+			else if( object.isContainer() )
+			{
+				collectHosts( object );
+			}
+		}
+	};
+
+	collectHosts( directory->rootObject() );
+
+	return hosts;
 }
 
 

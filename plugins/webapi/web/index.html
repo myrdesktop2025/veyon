@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Veyon Web - 课堂管理</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ============ 登录界面 ============ -->
+<section id="login-view" class="login-view">
+  <div class="login-card">
+    <h1>Veyon Web</h1>
+    <p class="login-subtitle">通过浏览器监控与控制教室电脑</p>
+
+    <div class="field">
+      <label for="auth-mode">认证方式</label>
+      <select id="auth-mode">
+        <option value="logon">账号密码登录</option>
+        <option value="key">Veyon 密钥文件登录</option>
+      </select>
+    </div>
+
+    <div id="logon-fields">
+      <div class="field">
+        <label for="username">用户名</label>
+        <input id="username" type="text" autocomplete="username" placeholder="登录客户端机器的用户名">
+      </div>
+      <div class="field">
+        <label for="password">密码</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="对应密码">
+      </div>
+    </div>
+
+    <div id="key-fields" class="hidden">
+      <div class="field">
+        <label for="keyname">密钥名称</label>
+        <input id="keyname" type="text" placeholder="例如 veyon">
+      </div>
+      <div class="field">
+        <label for="keydata">密钥内容</label>
+        <textarea id="keydata" rows="4" placeholder="粘贴客户端私钥文件的内容"></textarea>
+      </div>
+    </div>
+
+    <button id="connect-btn" class="primary">连接</button>
+    <div id="login-status" class="status-line"></div>
+
+    <p class="login-hint">本页面由 Veyon WebAPI 服务端提供（默认端口 11080）。登录后将对网络目录中的全部主机进行监控。</p>
+  </div>
+</section>
+
+<!-- ============ 主界面 ============ -->
+<section id="app-view" class="app-view hidden">
+  <header class="app-header">
+    <div class="app-title">
+      <strong>Veyon Web</strong>
+      <span id="conn-summary" class="muted"></span>
+    </div>
+    <div class="app-actions">
+      <button id="refresh-hosts-btn">刷新主机</button>
+      <button id="add-host-btn">手动添加主机</button>
+      <button id="logout-btn" class="danger">登出</button>
+    </div>
+  </header>
+
+  <div id="toolbar" class="toolbar"></div>
+
+  <main class="layout">
+    <div id="hosts-grid" class="hosts-grid"></div>
+    <aside id="detail-panel" class="detail-panel hidden">
+      <h2 id="detail-title">主机详情</h2>
+      <div id="detail-session" class="detail-info"></div>
+      <img id="detail-image" alt="主机画面">
+      <div id="detail-actions" class="detail-actions"></div>
+    </aside>
+  </main>
+</section>
+
+<!-- ============ 手动添加主机 ============ -->
+<dialog id="add-host-dialog">
+  <h3>手动添加主机</h3>
+  <p class="muted">输入 IP 地址或主机名，该主机将加入监控列表。</p>
+  <input id="add-host-input" type="text" placeholder="例如 192.168.1.50 或 pc-01">
+  <div class="dialog-actions">
+    <button id="add-host-cancel">取消</button>
+    <button id="add-host-confirm" class="primary">添加</button>
+  </div>
+</dialog>
+
+<!-- ============ 发送消息 ============ -->
+<dialog id="message-dialog">
+  <h3>发送消息</h3>
+  <input id="message-title" type="text" placeholder="标题（可选）">
+  <textarea id="message-text" rows="3" placeholder="消息内容"></textarea>
+  <div class="dialog-actions">
+    <button id="message-cancel">取消</button>
+    <button id="message-confirm" class="primary">发送</button>
+  </div>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>

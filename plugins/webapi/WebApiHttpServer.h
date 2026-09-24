@@ -52,13 +52,15 @@ private:
 
 	bool setupTls();
 
+	bool addStaticRoute( const QString& path, const QByteArray& contentType, const QString& resourceName );
+
 	template<Method M>
 	static QVariantMap dataFromRequest( const QHttpServerRequest& request );
 
 	template<Method M, typename ... Args>
 	bool addRoute( const QString& path,
 				  WebApiController::Response(WebApiController::* controllerMethod)( const WebApiController::Request& request,
-																					  Args... args ) );
+																				  Args... args ) );
 
 	QString getDebugInformation();
 

@@ -26,6 +26,7 @@
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 #include <QtHttpServer/qhttpserverfutureresponse.h>
 #endif
+#include <QFile>
 #include <QJsonDocument>
 #include <QSslCertificate>
 #include <QSslKey>
@@ -43,6 +44,17 @@
 static inline QByteArray toJson(const QVariant& data)
 {
 	return QJsonDocument::fromVariant(data).toJson(QJsonDocument::Compact);
+}
+
+static QByteArray loadWebResource( const QString& resourcePath )
+{
+	QFile resourceFile( QStringLiteral(":/%1").arg( resourcePath ) );
+	if( resourceFile.open( QFile::ReadOnly ) )
+	{
+		return resourceFile.readAll();
+	}
+
+	return {};
 }
 
 
@@ -241,13 +253,14 @@ QVariantMap WebApiHttpServer::dataFromRequest<WebApiHttpServer::Method::Delete>(
 
 	return data;
 }
+}
 
 
 
 template<WebApiHttpServer::Method M, typename ... Args>
 bool WebApiHttpServer::addRoute( const QString& path,
 								WebApiController::Response(WebApiController::* controllerMethod)( const WebApiController::Request& request,
-																									Args... args ) )
+																						Args... args ) )
 {
 	return m_server->route( QStringLiteral("/api/v1/%1").arg(path), []()
 		{
@@ -288,6 +301,22 @@ bool WebApiHttpServer::addRoute( const QString& path,
 									   (m_controller->*controllerMethod)(controllerRequest, std::forward<Args>(args)... ));
 			});
 		} );
+}
+
+
+
+bool WebApiHttpServer::addStaticRoute( const QString& path, const QByteArray& contentType, const QString& resourceName )
+{
+	const auto data = loadWebResource( resourceName );
+	if( data.isEmpty() )
+	{
+		vWarning() << "Web UI resource" << resourceName << "not found";
+		return false;
+	}
+
+	return m_server->route( path, [contentType, data]() {
+		return QHttpServerResponse{ contentType, data, QHttpServerResponse::StatusCode::Ok };
+	} );
 }
 
 
@@ -336,6 +365,14 @@ bool WebApiHttpServer::start()
 	success &= addRoute<Method::Put>( QStringLiteral("feature/<arg>"), &WebApiController::setFeatureStatus );
 	success &= addRoute<Method::Get>( QStringLiteral("user"), &WebApiController::getUserInformation );
 	success &= addRoute<Method::Get>(QStringLiteral("session"), &WebApiController::getSessionInformation);
+	success &= addRoute<Method::Get>(QStringLiteral("hosts"), &WebApiController::listHosts);
+
+	// serve the built-in web UI
+	success &= addStaticRoute( QStringLiteral("/"), QByteArrayLiteral("text/html; charset=utf-8"), QStringLiteral("webapi/web/index.html") );
+	success &= addStaticRoute( QStringLiteral("/index.html"), QByteArrayLiteral("text/html; charset=utf-8"), QStringLiteral("webapi/web/index.html") );
+	success &= addStaticRoute( QStringLiteral("/app.js"), QByteArrayLiteral("text/javascript; charset=utf-8"), QStringLiteral("webapi/web/app.js") );
+	success &= addStaticRoute( QStringLiteral("/style.css"), QByteArrayLiteral("text/css; charset=utf-8"), QStringLiteral("webapi/web/style.css") );
+	success &= addStaticRoute( QStringLiteral("/favicon.svg"), QByteArrayLiteral("image/svg+xml"), QStringLiteral("webapi/webapi.svg") );
 
 	if (m_debug)
 	{

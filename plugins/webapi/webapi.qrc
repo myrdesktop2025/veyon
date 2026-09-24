@@ -2,4 +2,9 @@
     <qresource prefix="/webapi" >
         <file>webapi.png</file>
     </qresource>
+    <qresource prefix="/webapi/web" >
+        <file>web/index.html</file>
+        <file>web/style.css</file>
+        <file>web/app.js</file>
+    </qresource>
 </RCC>

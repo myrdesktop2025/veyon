@@ -127,6 +127,7 @@ public:
 
 	Response getUserInformation( const Request& request );
 	Response getSessionInformation(const Request& request);
+	Response listHosts( const Request& request );
 
 	QString getStatistics();
 	QString getConnectionDetails();
