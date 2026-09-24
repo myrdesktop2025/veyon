@@ -36,7 +36,7 @@ jobs:
         uses: msys2/setup-msys2@v2
         with:
           msystem: UCRT64
-          update: true
+          update: false
           install: >-
             git
             base-devel
@@ -73,7 +73,6 @@ jobs:
         run: cmake --build build --parallel
 
       - name: Package (portable dist)
-        shell: bash
         run: |
           set -euo pipefail
           DIST=dist
@@ -83,7 +82,7 @@ jobs:
           # 插件（保持 plugins/ 目录结构，Veyon 按相对目录加载插件）
           find build/plugins -maxdepth 1 -type f \( -name '*.dll' -o -name '*.exe' \) -exec cp {} "$DIST/plugins/" \; 2>/dev/null || true
           # 翻译文件
-          find . -path ./build -prune -o -name '*.qm' -print 2>/dev/null | head -200 | xargs -r -I{} cp {} "$DIST/translations/" 2>/dev/null || true
+          find build/translations -name '*.qm' -print 2>/dev/null | head -200 | xargs -r -I{} cp {} "$DIST/translations/" 2>/dev/null || true
           # 编译器运行时
           cp /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll /ucrt64/bin/libwinpthread-1.dll "$DIST/" 2>/dev/null || true
           # Qt 运行时依赖（windeployqt 收集 Qt6 动态库与插件）
