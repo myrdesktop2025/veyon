@@ -1,0 +1,125 @@
+name: Build Windows (web-ui)
+
+# 在 GitHub 云端的 Windows 服务器上构建 web-ui 分支，
+# 产出 Windows x64 可运行的 Veyon（含内置 Web 管理界面），
+# 自动打包为 zip 并发布为预发布版本（tag: webui-latest）。
+#
+# 触发方式：
+#   1) 推送涉及 plugins/webapi/** 或本文件的提交到 web-ui 分支时自动构建
+#   2) 仓库 Actions 页面手动 "Run workflow"
+
+on:
+  push:
+    branches: [web-ui]
+    paths:
+      - '.github/workflows/build-windows.yml'
+      - 'plugins/webapi/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-win64:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Checkout (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Setup MSYS2 (UCRT64)
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            base-devel
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-5compat
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-httpserver
+            mingw-w64-ucrt-x86_64-qt6-websockets
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qca
+            mingw-w64-ucrt-x86_64-openssl
+            mingw-w64-ucrt-x86_64-zlib
+            mingw-w64-ucrt-x86_64-libpng
+            mingw-w64-ucrt-x86_64-libjpeg-turbo
+            mingw-w64-ucrt-x86_64-lzo2
+            mingw-w64-ucrt-x86_64-icu
+            p7zip
+
+      - name: Configure (CMake / Ninja / Qt6 / WebAPI)
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_QT6=ON \
+            -DWITH_WEBAPI=ON \
+            -DWITH_BUNDLED_LIBVNC=ON \
+            -DWITH_TESTS=OFF \
+            -DWITH_ADDONS=OFF \
+            -DWITH_LTO=OFF
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Package (portable dist)
+        shell: bash
+        run: |
+          set -euo pipefail
+          DIST=dist
+          rm -rf "$DIST" && mkdir -p "$DIST" "$DIST/plugins" "$DIST/translations"
+          # 可执行文件 / 核心库
+          find build -maxdepth 1 -type f \( -name '*.exe' -o -name '*.dll' \) -exec cp {} "$DIST/" \;
+          # 插件（保持 plugins/ 目录结构，Veyon 按相对目录加载插件）
+          find build/plugins -maxdepth 1 -type f \( -name '*.dll' -o -name '*.exe' \) -exec cp {} "$DIST/plugins/" \; 2>/dev/null || true
+          # 翻译文件
+          find . -path ./build -prune -o -name '*.qm' -print 2>/dev/null | head -200 | xargs -r -I{} cp {} "$DIST/translations/" 2>/dev/null || true
+          # 编译器运行时
+          cp /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll /ucrt64/bin/libwinpthread-1.dll "$DIST/" 2>/dev/null || true
+          # Qt 运行时依赖（windeployqt 收集 Qt6 动态库与插件）
+          windeployqt --no-translations --no-system-d3d-compiler --no-opengl-sw --no-compiler-runtime --dir "$DIST" "$DIST/veyon-server.exe" 2>/dev/null || true
+          # 兜底：补全 MSYS2 运行库中尚未收集的依赖 dll
+          for dll in $(find /ucrt64/bin -maxdepth 1 -name 'libssl-*.dll' -o -name 'libcrypto-*.dll' -o -name 'libqca-*.dll' -o -name 'libicu*.dll' -o -name 'libpng*.dll' -o -name 'libjpeg*.dll' -o -name 'liblzo2*.dll' -o -name 'libzstd*.dll' -o -name 'zlib1.dll' -o -name 'libharfbuzz*.dll' -o -name 'libpcre2*.dll' -o -name 'libbrotli*.dll' -o -name 'libfreetype*.dll' 2>/dev/null); do
+            cp "$dll" "$DIST/" 2>/dev/null || true
+          done
+          # 冒烟测试：验证可执行文件能加载（缺 dll 时会立即失败）
+          "$DIST/veyon-cli.exe" --help >/dev/null 2>&1 && echo "SMOKE: veyon-cli OK" || echo "SMOKE: veyon-cli exited ($?) - check manually"
+          "$DIST/veyon-server.exe" --help >/dev/null 2>&1 && echo "SMOKE: veyon-server OK" || echo "SMOKE: veyon-server exited ($?) - check manually"
+          # 打包
+          7z a -tzip veyon-webui-win64.zip "$DIST"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: veyon-webui-win64
+          path: veyon-webui-win64.zip
+          retention-days: 14
+
+      - name: Publish pre-release to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: webui-latest
+          name: Veyon Web UI (Windows x64) - web-ui 分支自动构建
+          body: |
+            自动构建产物（Windows 64 位，含内置 Web 管理界面）。
+
+            使用方式：
+            1. 解压 zip 到教师机任意目录
+            2. 以管理员身份运行 `veyon-server.exe`（服务模式）或按 Veyon 常规方式启动服务
+            3. 在浏览器打开 `http://<教师机IP>:11080/`，即可看到监控/控制界面
+
+            说明：此为预发布（pre-release），每次推送 web-ui 分支代码后自动更新。
+          files: veyon-webui-win64.zip
+          prerelease: true
+          allowUpdates: true
+          replacesArtifacts: true
