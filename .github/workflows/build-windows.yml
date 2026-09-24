@@ -33,21 +33,38 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Install MSYS2 (manual bootstrap)
+      - name: Download MSYS2 base package
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          # 下载 MSYS2 基础包（官方分发目录）
           curl.exe -L --retry 3 --retry-delay 5 -o "$env:RUNNER_TEMP\msys2.tar.xz" `
             https://repo.msys2.org/distrib/x86_64/msys2-base-x86_64-20260322.tar.xz
-          # 用 7-Zip 解压（runner 预装；分两步解 xz -> tar -> 目录）
+          Write-Host "Downloaded bytes: $((Get-Item "$env:RUNNER_TEMP\msys2.tar.xz").Length)"
+
+      - name: Extract MSYS2
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           & "C:\Program Files\7-Zip\7z.exe" x "$env:RUNNER_TEMP\msys2.tar.xz" -o"$env:RUNNER_TEMP\msys2x" -y
           & "C:\Program Files\7-Zip\7z.exe" x "$env:RUNNER_TEMP\msys2x\msys2-base-x86_64-20260322.tar" -o"D:\" -y
-          Test-Path D:\msys64\usr\bin\bash.exe
-          # 初始化密钥环
-          & D:\msys64\usr\bin\bash.exe -lc "pacman-key --init; pacman-key --populate msys2"
-          # MSYS2 标准流程：两次系统更新（首次更新 msys 运行时后需重进 shell）
+          if (-not (Test-Path D:\msys64\usr\bin\bash.exe)) { throw "bash.exe not found after extraction" }
+
+      - name: Init MSYS2 keyring
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & D:\msys64\usr\bin\bash.exe -lc "pacman-key --init && pacman-key --populate msys2"
+
+      - name: Update MSYS2 (pass 1)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           & D:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
+
+      - name: Update MSYS2 (pass 2)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
           & D:\msys64\usr\bin\bash.exe -lc "pacman -Syu --noconfirm"
 
       - name: Install build dependencies
