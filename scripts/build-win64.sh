@@ -15,6 +15,7 @@ gcc --version | head -1
 echo "=== Configure (CMake / Ninja / Qt6 / WebAPI) ==="
 cmake -S . -B build -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="/ucrt64" \
   -DWITH_QT6=ON \
   -DWITH_WEBAPI=ON \
   -DWITH_BUNDLED_LIBVNC=ON \
