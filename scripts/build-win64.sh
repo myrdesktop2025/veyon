@@ -36,6 +36,10 @@ find build/plugins -maxdepth 1 -type f \( -name '*.dll' -o -name '*.exe' \) -exe
 find build/translations -name '*.qm' -print 2>/dev/null | head -200 | xargs -r -I{} cp {} "$DIST/translations/" 2>/dev/null || true
 # 编译器运行时
 cp /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll /ucrt64/bin/libwinpthread-1.dll "$DIST/" 2>/dev/null || true
+# Qca 加密插件（Veyon 认证必需；windeployqt 不会收集）
+mkdir -p "$DIST/qca-qt6/crypto"
+cp /ucrt64/lib/qca-qt6/crypto/libqca-ossl.dll "$DIST/qca-qt6/crypto/" 2>/dev/null || true
+cp /ucrt64/bin/libqca-qt6.dll "$DIST/" 2>/dev/null || true
 # Qt 运行时依赖（windeployqt 收集 Qt6 动态库与插件）
 windeployqt --no-translations --no-system-d3d-compiler --no-opengl-sw --no-compiler-runtime --dir "$DIST" "$DIST/veyon-server.exe" 2>/dev/null || true
 # 兜底：补全 MSYS2 运行库中尚未收集的依赖 dll
