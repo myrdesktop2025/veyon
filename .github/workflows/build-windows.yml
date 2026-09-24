@@ -46,7 +46,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           & "C:\Program Files\7-Zip\7z.exe" x "$env:RUNNER_TEMP\msys2.tar.xz" -o"$env:RUNNER_TEMP\msys2x" -y
-          & "C:\Program Files\7-Zip\7z.exe" x "$env:RUNNER_TEMP\msys2x\msys2-base-x86_64-20260322.tar" -o"D:\" -y
+          # 7-Zip 解 xz 时按输入文件名去扩展名输出（msys2.tar）；动态查找兜底
+          $tarPath = "$env:RUNNER_TEMP\msys2x\msys2.tar"
+          if (-not (Test-Path $tarPath)) {
+            $tarPath = Get-ChildItem "$env:RUNNER_TEMP\msys2x" -Filter *.tar | Select-Object -First 1 -ExpandProperty FullName
+          }
+          Write-Host "Extracting: $tarPath"
+          & "C:\Program Files\7-Zip\7z.exe" x $tarPath -o"D:\" -y
           if (-not (Test-Path D:\msys64\usr\bin\bash.exe)) { throw "bash.exe not found after extraction" }
 
       - name: Init MSYS2 keyring
